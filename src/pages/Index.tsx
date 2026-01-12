@@ -2,7 +2,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { CampaignChart } from "@/components/dashboard/CampaignChart";
 import { RecentCampaigns } from "@/components/dashboard/RecentCampaigns";
-import { Megaphone, Users, DollarSign } from "lucide-react";
+import { Megaphone, Users, PoundSterling } from "lucide-react";
 
 const Index = () => {
   return (
@@ -23,8 +23,8 @@ const Index = () => {
             trend={{ value: 8, positive: true }}
           />
           <StatCard
-            icon={<DollarSign className="w-5 h-5" />}
-            value="$284K"
+            icon={<PoundSterling className="w-5 h-5" />}
+            value="£284K"
             label="Total Revenue"
             trend={{ value: 23, positive: true }}
           />
