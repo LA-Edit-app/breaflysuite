@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { CampaignData, ContentItem, Creator } from "@/data/campaignTrackerData";
 import {
   Calendar,
-  DollarSign,
+  PoundSterling,
   FileText,
   Image,
   Video,
@@ -216,7 +216,7 @@ export const CampaignDetailModal = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <DollarSign className="w-4 h-4" />
+                      <PoundSterling className="w-4 h-4" />
                       AG Price
                     </h4>
                     <p className="text-foreground font-medium text-lg">
@@ -227,7 +227,7 @@ export const CampaignDetailModal = ({
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <DollarSign className="w-4 h-4" />
+                      <PoundSterling className="w-4 h-4" />
                       Creator Fee
                     </h4>
                     <p className="text-foreground font-medium text-lg">
