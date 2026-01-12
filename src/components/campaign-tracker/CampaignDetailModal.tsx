@@ -73,6 +73,7 @@ export const CampaignDetailModal = ({
     title: "",
     platform: "Instagram",
     status: "draft",
+    source: "LA Edit app",
   });
 
   if (!campaign) return null;
@@ -97,6 +98,7 @@ export const CampaignDetailModal = ({
       url: newContent.url,
       dueDate: newContent.dueDate,
       notes: newContent.notes,
+      source: newContent.source || "LA Edit app",
     };
 
     const updatedContent = [...(campaign.content || []), contentItem];
@@ -106,6 +108,7 @@ export const CampaignDetailModal = ({
       title: "",
       platform: "Instagram",
       status: "draft",
+      source: "LA Edit app",
     });
     setShowAddContent(false);
     toast.success("Content added");
@@ -382,6 +385,7 @@ export const CampaignDetailModal = ({
                               {item.type.charAt(0).toUpperCase() +
                                 item.type.slice(1)}{" "}
                               • {item.platform}
+                              {item.source && ` • Added from: ${item.source}`}
                             </p>
                           </div>
                           <Select

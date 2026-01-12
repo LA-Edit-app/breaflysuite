@@ -16,6 +16,7 @@ export interface ContentItem {
   status: "draft" | "pending" | "approved" | "published";
   dueDate?: string;
   notes?: string;
+  source?: string;
 }
 
 export interface CampaignData {
@@ -97,6 +98,7 @@ export const initialCampaignData: CampaignData[] = [
         platform: "Instagram",
         status: "published",
         notes: "5-slide carousel featuring new arrivals",
+        source: "LA Edit app",
       },
       {
         id: "content-2",
@@ -104,6 +106,7 @@ export const initialCampaignData: CampaignData[] = [
         title: "Story Set - Unboxing",
         platform: "Instagram",
         status: "published",
+        source: "LA Edit app",
       },
     ],
   },
