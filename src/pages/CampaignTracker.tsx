@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Plus, Trash2, ArrowLeft, Eye, Upload } from "lucide-react";
+import { Search, Filter, Plus, Trash2, ArrowLeft, Eye, Upload, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -43,12 +43,16 @@ const currencyOptions = [
   { value: "EUR", label: "EUR" },
 ];
 
+const ZOOM_LEVELS = [0.7, 0.85, 1, 1.15, 1.3];
+const DEFAULT_ZOOM_INDEX = 2;
+
 const CampaignTracker = () => {
   const [campaigns, setCampaigns] = useState<CampaignData[]>(initialCampaignData);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCreator, setSelectedCreator] = useState<Creator | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignData | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [zoomIndex, setZoomIndex] = useState(DEFAULT_ZOOM_INDEX);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const creatorCampaigns = useMemo(() => {
@@ -188,6 +192,20 @@ const CampaignTracker = () => {
     campaign.invoiceNo.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const zoomLevel = ZOOM_LEVELS[zoomIndex];
+
+  const handleZoomIn = () => {
+    if (zoomIndex < ZOOM_LEVELS.length - 1) {
+      setZoomIndex((prev) => prev + 1);
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (zoomIndex > 0) {
+      setZoomIndex((prev) => prev - 1);
+    }
+  };
+
   // Show creator selector if no creator is selected
   if (!selectedCreator) {
     return (
@@ -244,6 +262,31 @@ const CampaignTracker = () => {
             <Button variant="outline" size="icon">
               <Filter className="w-4 h-4" />
             </Button>
+            <div className="flex items-center gap-1 border border-border rounded-md">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleZoomOut}
+                disabled={zoomIndex === 0}
+                className="h-9 w-9"
+                title="Zoom out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground min-w-[50px] text-center">
+                {Math.round(zoomLevel * 100)}%
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleZoomIn}
+                disabled={zoomIndex === ZOOM_LEVELS.length - 1}
+                className="h-9 w-9"
+                title="Zoom in"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <div className="flex gap-3">
             <input
@@ -271,7 +314,7 @@ const CampaignTracker = () => {
         {/* Campaigns Table */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="overflow-x-auto">
-            <Table>
+            <Table style={{ fontSize: `${zoomLevel}rem`, transform: `scale(1)` }} className="transition-all duration-200">
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="font-semibold text-foreground whitespace-nowrap w-10"></TableHead>
