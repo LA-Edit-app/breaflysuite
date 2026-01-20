@@ -10,6 +10,7 @@ import Creators from "./pages/Creators";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/campaign-tracker" element={<CampaignTracker />} />
           <Route path="/creators" element={<Creators />} />
