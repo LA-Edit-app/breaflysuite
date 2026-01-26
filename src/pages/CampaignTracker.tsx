@@ -324,7 +324,7 @@ const CampaignTracker = () => {
                   <TableHead className="font-semibold text-foreground min-w-[200px]">Activity</TableHead>
                   <TableHead className="font-semibold text-foreground whitespace-nowrap">Live Date</TableHead>
                   <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">AG Price</TableHead>
-                  <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">{selectedCreator.name.split(" ")[0]} Fee</TableHead>
+                  <TableHead className="font-semibold text-foreground whitespace-nowrap text-right">Lauren Fee</TableHead>
                   <TableHead className="font-semibold text-foreground whitespace-nowrap">Shot</TableHead>
                   <TableHead className="font-semibold text-foreground whitespace-nowrap">Complete</TableHead>
                   <TableHead className="font-semibold text-foreground whitespace-nowrap">Invoice No</TableHead>
@@ -397,12 +397,9 @@ const CampaignTracker = () => {
                       />
                     </TableCell>
                     <TableCell className="text-right">
-                      <EditableCell
-                        value={campaign.creatorFee}
-                        onChange={(v) => updateCampaign(campaign.id, "creatorFee", v)}
-                        type="number"
-                        displayClassName="text-muted-foreground justify-end"
-                      />
+                      <span className="text-muted-foreground">
+                        {campaign.agPrice != null ? `£${(campaign.agPrice * 0.008).toFixed(2)}` : "-"}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <EditableCell
