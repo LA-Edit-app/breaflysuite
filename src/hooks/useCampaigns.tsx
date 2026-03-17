@@ -238,7 +238,9 @@ export const useUpcomingCampaignEvents = () => {
         const creatorEmail = (c.creators as { name: string; email: string | null } | null)?.email ?? null;
 
         // Normalise to YYYY-MM-DD — Supabase may return a full ISO timestamp
-        const normalise = (d: string) => d.split('T')[0];
+        // or a space-separated datetime (e.g. "2026-03-17 00:00:00"), so we
+        // always take the first 10 chars instead of splitting on 'T'.
+        const normalise = (d: string) => d.slice(0, 10);
 
         if (c.launch_date && normalise(c.launch_date) >= todayIso) {
           events.push({

@@ -23,9 +23,9 @@ import { toast } from "sonner";
 // Build a Google Calendar "Create Event" URL for a campaign event
 function buildGoogleCalendarUrl(event: CampaignEvent, guestEmail?: string): string {
   // Convert ISO date to YYYYMMDD for all-day events
-  const dateCompact = event.date.replace(/-/g, "");
+  const dateCompact = event.date.slice(0, 10).replace(/-/g, "");
   // Google Calendar end date for all-day is exclusive (next day)
-  const endDate = new Date(event.date);
+  const endDate = new Date(`${event.date.slice(0, 10)}T12:00:00`);
   endDate.setDate(endDate.getDate() + 1);
   const endDateCompact = endDate.toISOString().split("T")[0].replace(/-/g, "");
 
@@ -50,7 +50,9 @@ function buildGoogleCalendarUrl(event: CampaignEvent, guestEmail?: string): stri
 
 // Format ISO date to a readable string
 function formatEventDate(iso: string): { day: string; month: string; weekday: string } {
-  const d = new Date(`${iso}T12:00:00`); // noon to avoid timezone offset issues
+  // Always use only the YYYY-MM-DD portion (first 10 chars) before appending
+  // a fixed time, so space-separated or full ISO strings are handled safely.
+  const d = new Date(`${iso.slice(0, 10)}T12:00:00`);
   return {
     day: d.toLocaleDateString("en-GB", { day: "2-digit" }),
     month: d.toLocaleDateString("en-GB", { month: "short" }),
