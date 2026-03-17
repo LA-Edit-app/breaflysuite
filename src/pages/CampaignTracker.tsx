@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { usePublishedSchema } from "@/hooks/useColumnSchemas";
+import { usePublishedSchema, DEFAULT_COLUMNS } from "@/hooks/useColumnSchemas";
 import type { ColumnDefinition } from "@/hooks/useColumnSchemas";
 
 const statusOptions = [
@@ -115,9 +115,10 @@ const CampaignTracker = () => {
   const highlightedRowRef = useRef<HTMLTableRowElement | null>(null);
   const syncedCreatorIdsRef = useRef<Set<string>>(new Set());
 
-  // Published column schema (falls back to defaults if none published yet)
+  // Published column schema — falls back to the 15 default columns while loading
+  // so the grid never appears blank.
   const { data: publishedSchema } = usePublishedSchema();
-  const activeColumns: ColumnDefinition[] = (publishedSchema?.columns ?? []).filter((c) => c.active);
+  const activeColumns: ColumnDefinition[] = (publishedSchema?.columns ?? DEFAULT_COLUMNS).filter((c) => c.active);
 
   const creators = useMemo<Creator[]>(() => {
     return creatorsRaw.map((creator) => ({

@@ -44,6 +44,26 @@ export const SYSTEM_COLUMN_KEYS = new Set([
   'invoiceNo', 'paid', 'includesVat', 'currency', 'brandPOs', 'paymentTerms',
 ]);
 
+// Default column set — mirrors the 15 built-in campaign fields.
+// Used as a fallback in the grid while the published schema is loading.
+export const DEFAULT_COLUMNS: ColumnDefinition[] = [
+  { key: 'brand',        label: 'Brand',          type: 'text',     order: 1,  active: true, required: true,  width: 'normal'  },
+  { key: 'launchDate',   label: 'Launch Date',     type: 'date',     order: 2,  active: true, required: false, width: 'compact' },
+  { key: 'activity',     label: 'Activity',        type: 'text',     order: 3,  active: true, required: false, width: 'wide'    },
+  { key: 'liveDate',     label: 'Live Date',       type: 'date',     order: 4,  active: true, required: false, width: 'compact' },
+  { key: 'agPrice',      label: 'AG Price',        type: 'currency', order: 5,  active: true, required: false, width: 'compact' },
+  { key: 'creatorFee',   label: 'Creator Fee',     type: 'currency', order: 6,  active: true, required: false, width: 'compact' },
+  { key: 'shot',         label: 'Shot',            type: 'text',     order: 7,  active: true, required: false, width: 'normal'  },
+  { key: 'complete',     label: 'Status',          type: 'select',   order: 8,  active: true, required: false, width: 'compact' },
+  { key: 'detailStatus', label: 'Detail Status',   type: 'select',   order: 9,  active: true, required: false, width: 'normal'  },
+  { key: 'invoiceNo',    label: 'Invoice No',      type: 'text',     order: 10, active: true, required: false, width: 'normal'  },
+  { key: 'paid',         label: 'Paid',            type: 'select',   order: 11, active: true, required: false, width: 'compact' },
+  { key: 'includesVat',  label: 'Includes VAT',    type: 'select',   order: 12, active: true, required: false, width: 'compact' },
+  { key: 'currency',     label: 'Currency',        type: 'select',   order: 13, active: true, required: false, width: 'compact' },
+  { key: 'brandPOs',     label: 'Brand POs',       type: 'text',     order: 14, active: true, required: false, width: 'normal'  },
+  { key: 'paymentTerms', label: 'Payment Terms',   type: 'text',     order: 15, active: true, required: false, width: 'normal'  },
+];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const parseColumns = (raw: unknown): ColumnDefinition[] => {
@@ -90,7 +110,6 @@ export const usePublishedSchema = () => {
   return useQuery({
     queryKey: ['column-schema-published', agencyId],
     enabled: !!agencyId,
-    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('agency_column_schemas')

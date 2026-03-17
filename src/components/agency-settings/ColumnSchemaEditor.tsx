@@ -165,13 +165,19 @@ export function ColumnSchemaEditor({ columns, onChange, readOnly = false }: Prop
                   <Input
                     value={col.label}
                     onChange={(e) => {
-                      const newLabel = e.target.value;
-                      const patch: Partial<ColumnDefinition> = { label: newLabel };
-                      // Auto-update key for custom (non-system) columns
-                      if (!isSystem && SYSTEM_KEY_RE.test(slugify(newLabel))) {
-                        patch.key = slugify(newLabel);
+                      // Only update label while typing — do NOT update col.key here,
+                      // because col.key is used as the React list key and changing it
+                      // on every keystroke causes the element to remount (losing focus).
+                      update(col.key, { label: e.target.value });
+                    }}
+                    onBlur={(e) => {
+                      // Derive a stable identifier from the final label only on blur.
+                      if (!isSystem) {
+                        const slug = slugify(e.target.value);
+                        if (slug && SYSTEM_KEY_RE.test(slug)) {
+                          update(col.key, { key: slug });
+                        }
                       }
-                      update(col.key, patch);
                     }}
                     className="h-7 text-sm border-none shadow-none bg-transparent p-0 focus-visible:ring-0 font-medium"
                     placeholder="Column name"
