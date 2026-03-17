@@ -1,7 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { parse as dateFnsParse, format as dateFnsFormat, isValid } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { useAgencyId } from './useDatabase';
+
+// Attempt to parse any date string the campaign tracker might store, and
+// return a canonical YYYY-MM-DD string. Returns null when genuinely unparseable.
+const parseCampaignDate = (raw: string): string | null => {
+  if (!raw) return null;
+  // Fast path: already ISO YYYY-MM-DD (with optional time / timezone)
+  const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+  // DatePickerCell stores as "dd MMM yyyy" or "d MMM yyyy"
+  const formats = ['dd MMM yyyy', 'd MMM yyyy', 'dd/MM/yyyy', 'd/M/yyyy'];
+  for (const fmt of formats) {
+    try {
+      const parsed = dateFnsParse(raw, fmt, new Date());
+      if (isValid(parsed)) return dateFnsFormat(parsed, 'yyyy-MM-dd');
+    } catch { /* try next */ }
+  }
+  return null;
+};
 
 type Campaign = Database['public']['Tables']['campaigns']['Row'];
 type CampaignInsert = Database['public']['Tables']['campaigns']['Insert'];
@@ -226,8 +245,10 @@ export const useUpcomingCampaignEvents = () => {
             email
           )
         `)
-        .or(`launch_date.gte.${todayIso},live_date.gte.${todayIso}`)
-        .order('launch_date', { ascending: true });
+        // Fetch all campaigns — filter by date client-side because dates may be
+        // stored in "dd MMM yyyy" text format which Supabase can't reliably compare
+        // against an ISO string.
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -237,29 +258,27 @@ export const useUpcomingCampaignEvents = () => {
         const creatorName = (c.creators as { name: string; email: string | null } | null)?.name ?? 'Unknown Creator';
         const creatorEmail = (c.creators as { name: string; email: string | null } | null)?.email ?? null;
 
-        // Normalise to YYYY-MM-DD — Supabase may return a full ISO timestamp
-        // or a space-separated datetime (e.g. "2026-03-17 00:00:00"), so we
-        // always take the first 10 chars instead of splitting on 'T'.
-        const normalise = (d: string) => d.slice(0, 10);
+        const launchIso = c.launch_date ? parseCampaignDate(c.launch_date) : null;
+        const liveIso   = c.live_date   ? parseCampaignDate(c.live_date)   : null;
 
-        if (c.launch_date && normalise(c.launch_date) >= todayIso) {
+        if (launchIso && launchIso >= todayIso) {
           events.push({
             id: `${c.id}-launch`,
             campaignId: c.id,
             type: 'launch',
-            date: normalise(c.launch_date),
+            date: launchIso,
             brand: c.brand,
             creatorName,
             creatorEmail,
             campaignStatus: c.campaign_status,
           });
         }
-        if (c.live_date && normalise(c.live_date) >= todayIso) {
+        if (liveIso && liveIso >= todayIso) {
           events.push({
             id: `${c.id}-live`,
             campaignId: c.id,
             type: 'live',
-            date: normalise(c.live_date),
+            date: liveIso,
             brand: c.brand,
             creatorName,
             creatorEmail,
