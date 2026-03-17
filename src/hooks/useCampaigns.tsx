@@ -237,24 +237,27 @@ export const useUpcomingCampaignEvents = () => {
         const creatorName = (c.creators as { name: string; email: string | null } | null)?.name ?? 'Unknown Creator';
         const creatorEmail = (c.creators as { name: string; email: string | null } | null)?.email ?? null;
 
-        if (c.launch_date && c.launch_date >= todayIso) {
+        // Normalise to YYYY-MM-DD — Supabase may return a full ISO timestamp
+        const normalise = (d: string) => d.split('T')[0];
+
+        if (c.launch_date && normalise(c.launch_date) >= todayIso) {
           events.push({
             id: `${c.id}-launch`,
             campaignId: c.id,
             type: 'launch',
-            date: c.launch_date,
+            date: normalise(c.launch_date),
             brand: c.brand,
             creatorName,
             creatorEmail,
             campaignStatus: c.campaign_status,
           });
         }
-        if (c.live_date && c.live_date >= todayIso) {
+        if (c.live_date && normalise(c.live_date) >= todayIso) {
           events.push({
             id: `${c.id}-live`,
             campaignId: c.id,
             type: 'live',
-            date: c.live_date,
+            date: normalise(c.live_date),
             brand: c.brand,
             creatorName,
             creatorEmail,
