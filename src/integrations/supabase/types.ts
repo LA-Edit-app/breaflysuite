@@ -319,6 +319,7 @@ export type Database = {
           related_campaign_id: string | null
           agency_id: string | null
           created_by: string | null
+          assigned_to: string | null
           created_at: string
           updated_at: string
         }
@@ -331,6 +332,7 @@ export type Database = {
           related_campaign_id?: string | null
           agency_id?: string | null
           created_by?: string | null
+          assigned_to?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -343,6 +345,7 @@ export type Database = {
           related_campaign_id?: string | null
           agency_id?: string | null
           created_by?: string | null
+          assigned_to?: string | null
           created_at?: string
           updated_at?: string
         }

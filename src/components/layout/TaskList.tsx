@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, X, Check, Pencil, ArrowUp, ArrowDown, User, Megaphone } from "lucide-react";
+import { Plus, X, Check, Pencil, ArrowUp, ArrowDown, User, Megaphone, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { useCreators } from "@/hooks/useCreators";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
+import { useIsAgencyAdmin, useAgencyMembers } from "@/hooks/useAgencyMembers";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Task {
   id: string;
@@ -25,6 +27,7 @@ interface Task {
   sort_order: number;
   related_creator_id: string | null;
   related_campaign_id: string | null;
+  assigned_to: string | null;
   creator?: {
     id: string;
     name: string;
@@ -32,6 +35,12 @@ interface Task {
   campaign?: {
     id: string;
     brand: string;
+  } | null;
+  assignee?: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
   } | null;
 }
 
@@ -47,6 +56,17 @@ export function TaskList() {
   const deleteTask = useDeleteTask();
   const swapTaskOrder = useSwapTaskOrder();
 
+  const { data: isAdmin } = useIsAgencyAdmin();
+  const { data: agencyMembersData } = useAgencyMembers();
+  const { user } = useAuth();
+
+  const memberOptions = (agencyMembersData ?? [])
+    .filter((m) => m.profiles)
+    .map((m) => ({
+      id: m.user_id,
+      name: [m.profiles?.first_name, m.profiles?.last_name].filter(Boolean).join(' ') || m.profiles?.email || 'Unknown',
+    }));
+
   const [newTask, setNewTask] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -54,9 +74,11 @@ export function TaskList() {
   const [editRelationType, setEditRelationType] = useState<"none" | "creator" | "campaign">("none");
   const [editRelatedCreatorId, setEditRelatedCreatorId] = useState("");
   const [editRelatedCampaignId, setEditRelatedCampaignId] = useState("");
+  const [editAssigneeId, setEditAssigneeId] = useState("");
   const [relationType, setRelationType] = useState<"none" | "creator" | "campaign">("none");
   const [relatedCreatorId, setRelatedCreatorId] = useState("");
   const [relatedCampaignId, setRelatedCampaignId] = useState("");
+  const [assigneeId, setAssigneeId] = useState("");
   const [taskRelationFilter, setTaskRelationFilter] = useState<TaskRelationFilter>("all");
 
   const getRelationTypeFromTask = (task: Task): "none" | "creator" | "campaign" => {
@@ -105,12 +127,14 @@ export function TaskList() {
           sort_order: nextSortOrder,
           related_creator_id: relationType === "creator" ? relatedCreatorId : null,
           related_campaign_id: relationType === "campaign" ? relatedCampaignId : null,
+          assigned_to: isAdmin ? (assigneeId || null) : (user?.id ?? null),
         });
         setNewTask("");
         setIsAdding(false);
         setRelationType("none");
         setRelatedCreatorId("");
         setRelatedCampaignId("");
+        setAssigneeId("");
       } catch (mutationError: any) {
         toast.error(mutationError?.message || "Failed to create task");
       }
@@ -163,6 +187,7 @@ export function TaskList() {
     setEditRelationType(getRelationTypeFromTask(task));
     setEditRelatedCreatorId(task.related_creator_id || "");
     setEditRelatedCampaignId(task.related_campaign_id || "");
+    setEditAssigneeId(task.assigned_to || "");
   };
 
   const cancelEdit = () => {
@@ -171,6 +196,7 @@ export function TaskList() {
     setEditRelationType("none");
     setEditRelatedCreatorId("");
     setEditRelatedCampaignId("");
+    setEditAssigneeId("");
   };
 
   const saveEdit = async () => {
@@ -192,6 +218,7 @@ export function TaskList() {
             title: editText.trim(),
             related_creator_id: editRelationType === "creator" ? editRelatedCreatorId : null,
             related_campaign_id: editRelationType === "campaign" ? editRelatedCampaignId : null,
+            ...(isAdmin ? { assigned_to: editAssigneeId || null } : {}),
           },
         });
       } catch (mutationError: any) {
@@ -287,6 +314,7 @@ export function TaskList() {
             setRelationType("none");
             setRelatedCreatorId("");
             setRelatedCampaignId("");
+            setAssigneeId("");
           }}
           title="Add task"
         >
@@ -376,6 +404,23 @@ export function TaskList() {
                   </SelectContent>
                 </Select>
               )}
+
+              {isAdmin && memberOptions.length > 0 && (
+                <Select
+                  value={assigneeId || "__unassigned__"}
+                  onValueChange={(v) => setAssigneeId(v === "__unassigned__" ? "" : v)}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue placeholder="Assign to (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                    {memberOptions.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
         )}
@@ -461,6 +506,23 @@ export function TaskList() {
                       </SelectContent>
                     </Select>
                   )}
+
+                  {isAdmin && memberOptions.length > 0 && (
+                    <Select
+                      value={editAssigneeId || "__unassigned__"}
+                      onValueChange={(v) => setEditAssigneeId(v === "__unassigned__" ? "" : v)}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Assign to" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                        {memberOptions.map((m) => (
+                          <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
             ) : (
@@ -488,6 +550,15 @@ export function TaskList() {
                       {taskRelationMeta.label}
                     </Badge>
                   </button>
+                )}
+                {task.assignee && (
+                  <Badge
+                    variant="outline"
+                    className="mt-0.5 text-[10px] font-medium inline-flex items-center gap-1"
+                  >
+                    <UserCheck className="h-3 w-3" />
+                    {[task.assignee.first_name, task.assignee.last_name].filter(Boolean).join(' ') || task.assignee.email || 'Assigned'}
+                  </Badge>
                 )}
               </div>
             )}
