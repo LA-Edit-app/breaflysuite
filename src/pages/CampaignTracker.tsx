@@ -159,6 +159,7 @@ const CampaignTracker = () => {
       paymentTerms: campaign.payment_terms || "",
       notes: campaign.notes || "",
       content: [],
+      custom_fields: ((campaign as unknown as Record<string, unknown>).custom_fields as Record<string, unknown> | undefined) ?? {},
     }));
   }, [campaignsRaw]);
 
@@ -858,9 +859,7 @@ const CampaignTracker = () => {
                       </Button>
                     </TableCell>
                     {activeColumns.map((col) => {
-                      const customVal = (campaign as unknown as Record<string, unknown>).custom_fields
-                        ? ((campaign as unknown as Record<string, Record<string, unknown>>).custom_fields?.[col.key] ?? "")
-                        : "";
+                      const customVal = campaign.custom_fields?.[col.key] ?? "";
 
                       switch (col.key) {
                         case "brand":

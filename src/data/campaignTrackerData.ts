@@ -38,6 +38,8 @@ export interface CampaignData {
   paymentTerms: string;
   content?: ContentItem[];
   notes?: string;
+  secondaryStatus?: string;
+  custom_fields?: Record<string, unknown>;
 }
 
 import laurenArthursAvatar from "@/assets/lauren-arthurs.png";
