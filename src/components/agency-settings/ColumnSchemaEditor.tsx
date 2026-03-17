@@ -104,7 +104,12 @@ export function ColumnSchemaEditor({ columns, onChange, readOnly = false }: Prop
     const col = columns.find((c) => c.key === key);
     if (!col) return;
     const options = [...(col.options ?? [])];
-    options[idx] = { ...options[idx], [field]: val };
+    if (field === "label") {
+      // Keep value in sync with label so it's never left as an empty string
+      options[idx] = { ...options[idx], label: val, value: val };
+    } else {
+      options[idx] = { ...options[idx], [field]: val };
+    }
     update(key, { options });
   };
 

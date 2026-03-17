@@ -38,7 +38,10 @@ export function StatusSelect({
         <SelectItem value="_empty_">
           <span className="text-muted-foreground">None</span>
         </SelectItem>
-        {options.filter((o) => o.value !== "").map((option) => (
+        {options
+          .map((o) => o.value === "" ? { ...o, value: o.label } : o)
+          .filter((o) => o.value !== "")
+          .map((option) => (
           <SelectItem key={option.value} value={option.value}>
             <Badge className={cn(getStyle(option.value))}>{option.label}</Badge>
           </SelectItem>
