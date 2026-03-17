@@ -58,7 +58,10 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
+      <div className={cn(
+        "p-4 border-b border-sidebar-border flex items-center",
+        collapsed ? "justify-center" : "justify-between"
+      )}>
         {!collapsed && (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -68,23 +71,19 @@ export function Sidebar() {
           </div>
         )}
         {collapsed && (
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center mx-auto">
-            <Megaphone className="w-4 h-4 text-primary-foreground" />
-          </div>
+          <button
+            onClick={() => setCollapsed(false)}
+            className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center hover:opacity-90 transition-opacity"
+            title="Expand sidebar"
+          >
+            <Megaphone className="w-5 h-5 text-primary-foreground" />
+          </button>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className={cn(
-            "p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors",
-            collapsed && "mx-auto mt-2"
-          )}
-        >
-          {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-sidebar-foreground" />
-          ) : (
-            <ChevronLeft className="w-4 h-4 text-sidebar-foreground" />
-          )}
-        </button>
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-lg hover:bg-sidebar-accent transition-colors"
+        )}
       </div>
 
       {/* Navigation */}
