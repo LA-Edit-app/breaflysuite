@@ -3,6 +3,7 @@ import { parse as dateFnsParse, format as dateFnsFormat, isValid } from 'date-fn
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 import { useAgencyId } from './useDatabase';
+import { useCustomEvents, type CalendarEvent } from './useCustomEvents';
 
 // Attempt to parse any date string the campaign tracker might store, and
 // return a canonical YYYY-MM-DD string. Returns null when genuinely unparseable.
@@ -289,6 +290,60 @@ export const useUpcomingCampaignEvents = () => {
 
       return events.sort((a, b) => a.date.localeCompare(b.date));
     },
+  });
+};
+
+// Combined hook that returns both campaign events and custom events for the calendar
+export const useAllCalendarEvents = () => {
+  const campaignEventsQuery = useUpcomingCampaignEvents();
+  const customEventsQuery = useCustomEvents();
+
+  return useQuery({
+    queryKey: ["all-calendar-events", campaignEventsQuery.data, customEventsQuery.data],
+    queryFn: async (): Promise<CalendarEvent[]> => {
+      // Use the data from both queries
+      const campaignEvents = campaignEventsQuery.data ?? [];
+      const customEvents = customEventsQuery.data ?? [];
+
+      const allEvents: CalendarEvent[] = [];
+
+      // Add campaign events
+      campaignEvents.forEach((event) => {
+        allEvents.push({
+          id: event.id,
+          type: "campaign",
+          date: event.date,
+          title: `${event.brand} (${event.type === 'launch' ? 'Launch' : 'Live'})`,
+          color: event.type === 'launch' ? '#3b82f6' : '#6b7280',
+          all_day: true,
+          // Campaign-specific fields
+          campaignId: event.campaignId,
+          eventType: event.type,
+          brand: event.brand,
+          creatorName: event.creatorName,
+          creatorEmail: event.creatorEmail,
+          campaignStatus: event.campaignStatus,
+        });
+      });
+
+      // Add custom events
+      customEvents.forEach((event) => {
+        allEvents.push({
+          id: event.id,
+          type: "custom",
+          date: event.event_date,
+          title: event.title,
+          description: event.description || undefined,
+          color: event.color,
+          all_day: event.all_day,
+          time: event.event_time || undefined,
+        });
+      });
+
+      // Sort by date
+      return allEvents.sort((a, b) => a.date.localeCompare(b.date));
+    },
+    enabled: campaignEventsQuery.isSuccess && customEventsQuery.isSuccess,
   });
 };
 

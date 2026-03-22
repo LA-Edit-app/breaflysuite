@@ -256,6 +256,47 @@ export type Database = {
           updated_at?: string
         }
       }
+      custom_events: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          event_date: string
+          event_time: string | null
+          color: string
+          all_day: boolean
+          agency_id: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          event_date: string
+          event_time?: string | null
+          color?: string
+          all_day?: boolean
+          agency_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          event_date?: string
+          event_time?: string | null
+          color?: string
+          all_day?: boolean
+          agency_id?: string | null
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       content_items: {
         Row: {
           id: string
