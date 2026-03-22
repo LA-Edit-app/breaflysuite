@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Plus, X, Check, Pencil, ArrowUp, ArrowDown, User, Megaphone, UserCheck } from "lucide-react";
+import { useState } from "react";
+import { Plus, X, Check, Pencil, ArrowUp, ArrowDown, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useCreators } from "@/hooks/useCreators";
-import { useCampaigns } from "@/hooks/useCampaigns";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { useIsAgencyAdmin, useAgencyMembers } from "@/hooks/useAgencyMembers";
@@ -25,17 +23,7 @@ interface Task {
   title: string;
   completed: boolean;
   sort_order: number;
-  related_creator_id: string | null;
-  related_campaign_id: string | null;
   assigned_to: string | null;
-  creator?: {
-    id: string;
-    name: string;
-  } | null;
-  campaign?: {
-    id: string;
-    brand: string;
-  } | null;
   assignee?: {
     id: string;
     first_name: string | null;
@@ -49,8 +37,6 @@ type TaskRelationFilter = "all" | "creator" | "campaign";
 export function TaskList() {
   const navigate = useNavigate();
   const { data: tasks = [], isLoading, error } = useTasks();
-  const { data: creators = [] } = useCreators();
-  const { data: campaigns = [] } = useCampaigns();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
@@ -71,51 +57,15 @@ export function TaskList() {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
-  const [editRelationType, setEditRelationType] = useState<"none" | "creator" | "campaign">("none");
-  const [editRelatedCreatorId, setEditRelatedCreatorId] = useState("");
-  const [editRelatedCampaignId, setEditRelatedCampaignId] = useState("");
   const [editAssigneeId, setEditAssigneeId] = useState("");
-  const [relationType, setRelationType] = useState<"none" | "creator" | "campaign">("none");
-  const [relatedCreatorId, setRelatedCreatorId] = useState("");
-  const [relatedCampaignId, setRelatedCampaignId] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
-  const [taskRelationFilter, setTaskRelationFilter] = useState<TaskRelationFilter>("all");
 
-  const getRelationTypeFromTask = (task: Task): "none" | "creator" | "campaign" => {
-    if (task.related_creator_id) return "creator";
-    if (task.related_campaign_id) return "campaign";
-    return "none";
-  };
 
-  const getTaskRelationType = (task: Task): TaskRelationFilter => {
-    if (task.related_creator_id) return "creator";
-    if (task.related_campaign_id) return "campaign";
-    return "all";
-  };
 
-  const filteredTasks = useMemo(() => {
-    if (taskRelationFilter === "all") return tasks;
-    return tasks.filter((task) => getTaskRelationType(task) === taskRelationFilter);
-  }, [tasks, taskRelationFilter]);
 
-  const getFilterLabel = (filter: TaskRelationFilter) => {
-    if (filter === "creator") return "Creator-related";
-    if (filter === "campaign") return "Campaign-related";
-    return "All";
-  };
 
   const addTask = async () => {
     if (newTask.trim()) {
-      if (relationType === "creator" && !relatedCreatorId) {
-        toast.error("Select a creator for this task relation");
-        return;
-      }
-
-      if (relationType === "campaign" && !relatedCampaignId) {
-        toast.error("Select a campaign for this task relation");
-        return;
-      }
-
       try {
         const nextSortOrder = tasks.length > 0
           ? Math.max(...tasks.map((task) => task.sort_order)) + 1
@@ -125,8 +75,6 @@ export function TaskList() {
           title: newTask.trim(),
           completed: false,
           sort_order: nextSortOrder,
-          related_creator_id: relationType === "creator" ? relatedCreatorId : null,
-          related_campaign_id: relationType === "campaign" ? relatedCampaignId : null,
           assigned_to: isAdmin ? (assigneeId || null) : (user?.id ?? null),
         });
         setNewTask("");
@@ -184,40 +132,22 @@ export function TaskList() {
   const startEditing = (task: Task) => {
     setEditingId(task.id);
     setEditText(task.title);
-    setEditRelationType(getRelationTypeFromTask(task));
-    setEditRelatedCreatorId(task.related_creator_id || "");
-    setEditRelatedCampaignId(task.related_campaign_id || "");
     setEditAssigneeId(task.assigned_to || "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditText("");
-    setEditRelationType("none");
-    setEditRelatedCreatorId("");
-    setEditRelatedCampaignId("");
     setEditAssigneeId("");
   };
 
   const saveEdit = async () => {
     if (editingId && editText.trim()) {
-      if (editRelationType === "creator" && !editRelatedCreatorId) {
-        toast.error("Select a creator for this task relation");
-        return;
-      }
-
-      if (editRelationType === "campaign" && !editRelatedCampaignId) {
-        toast.error("Select a campaign for this task relation");
-        return;
-      }
-
       try {
         await updateTask.mutateAsync({
           id: editingId,
           updates: {
             title: editText.trim(),
-            related_creator_id: editRelationType === "creator" ? editRelatedCreatorId : null,
-            related_campaign_id: editRelationType === "campaign" ? editRelatedCampaignId : null,
             ...(isAdmin ? { assigned_to: editAssigneeId || null } : {}),
           },
         });
@@ -234,75 +164,17 @@ export function TaskList() {
     } else if (e.key === "Escape") {
       setIsAdding(false);
       setNewTask("");
-      setRelationType("none");
-      setRelatedCreatorId("");
-      setRelatedCampaignId("");
+      setAssigneeId("");
     }
   };
 
-  const getTaskRelationMeta = (task: Task) => {
-    if (task.creator) {
-      return {
-        label: `Creator: ${task.creator.name}`,
-        icon: User,
-        badgeClassName: "bg-blue-100 text-blue-700 hover:bg-blue-100",
-        onClick: () => {
-          navigate("/campaign-tracker", {
-            state: {
-              creatorId: task.creator?.id,
-            },
-          });
-        },
-      };
-    }
 
-    if (task.campaign) {
-      return {
-        label: `Campaign: ${task.campaign.brand}`,
-        icon: Megaphone,
-        badgeClassName: "bg-violet-100 text-violet-700 hover:bg-violet-100",
-        onClick: () => {
-          navigate("/campaign-tracker", {
-            state: {
-              campaignId: task.campaign?.id,
-              openDetailReadonly: true,
-            },
-          });
-        },
-      };
-    }
-
-    return null;
-  };
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-muted-foreground">Filter</span>
-          <Select
-            value={taskRelationFilter}
-            onValueChange={(value) => setTaskRelationFilter(value as TaskRelationFilter)}
-          >
-            <SelectTrigger className="h-8 w-[170px] text-xs">
-              <SelectValue placeholder="Filter tasks" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All ({tasks.length})</SelectItem>
-              <SelectItem value="creator">
-                Creator-related ({tasks.filter((task) => getTaskRelationType(task) === "creator").length})
-              </SelectItem>
-              <SelectItem value="campaign">
-                Campaign-related ({tasks.filter((task) => getTaskRelationType(task) === "campaign").length})
-              </SelectItem>
-            </SelectContent>
-          </Select>
-
-          {taskRelationFilter !== "all" && (
-            <Badge variant="secondary" className="text-[10px] font-medium">
-              Showing {getFilterLabel(taskRelationFilter).toLowerCase()}
-            </Badge>
-          )}
+          <span className="text-xs font-medium text-muted-foreground">Tasks ({tasks.length})</span>
         </div>
 
         <Button
@@ -311,9 +183,6 @@ export function TaskList() {
           className="h-7 w-7"
           onClick={() => {
             setIsAdding(true);
-            setRelationType("none");
-            setRelatedCreatorId("");
-            setRelatedCampaignId("");
             setAssigneeId("");
           }}
           title="Add task"
@@ -357,54 +226,6 @@ export function TaskList() {
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              <Select
-                value={relationType}
-                onValueChange={(value: "none" | "creator" | "campaign") => {
-                  setRelationType(value);
-                  if (value !== "creator") setRelatedCreatorId("");
-                  if (value !== "campaign") setRelatedCampaignId("");
-                }}
-              >
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue placeholder="Task relation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No relation</SelectItem>
-                  <SelectItem value="creator">Related to creator</SelectItem>
-                  <SelectItem value="campaign">Related to campaign</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {relationType === "creator" && (
-                <Select value={relatedCreatorId} onValueChange={setRelatedCreatorId}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Select creator" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {creators.map((creator) => (
-                      <SelectItem key={creator.id} value={creator.id}>
-                        {creator.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {relationType === "campaign" && (
-                <Select value={relatedCampaignId} onValueChange={setRelatedCampaignId}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue placeholder="Select campaign" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {campaigns.map((campaign) => (
-                      <SelectItem key={campaign.id} value={campaign.id}>
-                        {campaign.brand}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
               {isAdmin && memberOptions.length > 0 && (
                 <Select
                   value={assigneeId || "__unassigned__"}
@@ -425,10 +246,9 @@ export function TaskList() {
           </div>
         )}
 
-        {filteredTasks.map((task, index) => {
+        {tasks.map((task, index) => {
           const isFirst = index === 0;
-          const isLast = index === filteredTasks.length - 1;
-          const taskRelationMeta = getTaskRelationMeta(task);
+          const isLast = index === tasks.length - 1;
 
           return (
           <div
@@ -459,54 +279,6 @@ export function TaskList() {
                   autoFocus
                 />
                 <div className="grid grid-cols-1 gap-2">
-                  <Select
-                    value={editRelationType}
-                    onValueChange={(value: "none" | "creator" | "campaign") => {
-                      setEditRelationType(value);
-                      if (value !== "creator") setEditRelatedCreatorId("");
-                      if (value !== "campaign") setEditRelatedCampaignId("");
-                    }}
-                  >
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue placeholder="Task relation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No relation</SelectItem>
-                      <SelectItem value="creator">Related to creator</SelectItem>
-                      <SelectItem value="campaign">Related to campaign</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {editRelationType === "creator" && (
-                    <Select value={editRelatedCreatorId} onValueChange={setEditRelatedCreatorId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Select creator" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {creators.map((creator) => (
-                          <SelectItem key={creator.id} value={creator.id}>
-                            {creator.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-
-                  {editRelationType === "campaign" && (
-                    <Select value={editRelatedCampaignId} onValueChange={setEditRelatedCampaignId}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder="Select campaign" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {campaigns.map((campaign) => (
-                          <SelectItem key={campaign.id} value={campaign.id}>
-                            {campaign.brand}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-
                   {isAdmin && memberOptions.length > 0 && (
                     <Select
                       value={editAssigneeId || "__unassigned__"}
@@ -536,25 +308,10 @@ export function TaskList() {
                 >
                   {task.title}
                 </span>
-                {taskRelationMeta && (
-                  <button
-                    type="button"
-                    className="text-left"
-                    onClick={taskRelationMeta.onClick}
-                  >
-                    <Badge
-                      variant="secondary"
-                      className={cn("mt-0.5 text-[10px] font-medium inline-flex items-center gap-1", taskRelationMeta.badgeClassName)}
-                    >
-                      <taskRelationMeta.icon className="h-3 w-3" />
-                      {taskRelationMeta.label}
-                    </Badge>
-                  </button>
-                )}
                 {task.assignee && (
                   <Badge
                     variant="outline"
-                    className="mt-0.5 ml-1 text-[10px] font-medium inline-flex items-center gap-1"
+                    className="mt-0.5 text-[10px] font-medium inline-flex items-center gap-1"
                   >
                     <UserCheck className="h-3 w-3" />
                     Assigned to: {[task.assignee.first_name, task.assignee.last_name].filter(Boolean).join(' ') || task.assignee.email || 'Unknown'}
@@ -569,7 +326,7 @@ export function TaskList() {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6"
-                    onClick={() => void moveTask(task, "up", filteredTasks)}
+                    onClick={() => void moveTask(task, "up", tasks)}
                     title="Move up"
                   >
                     <ArrowUp className="h-3 w-3" />
@@ -580,7 +337,7 @@ export function TaskList() {
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6"
-                    onClick={() => void moveTask(task, "down", filteredTasks)}
+                    onClick={() => void moveTask(task, "down", tasks)}
                     title="Move down"
                   >
                     <ArrowDown className="h-3 w-3" />
@@ -631,17 +388,17 @@ export function TaskList() {
           );
         })}
 
-        {filteredTasks.length === 0 && !isAdding && !isLoading && !error && (
+        {tasks.length === 0 && !isAdding && !isLoading && !error && (
           <div className="rounded-lg border border-dashed border-border py-6 text-center">
-            <p className="text-sm text-muted-foreground">No tasks for this filter</p>
-            <p className="text-xs text-muted-foreground/80 mt-1">Try switching filter or add a new task</p>
+            <p className="text-sm text-muted-foreground">No tasks yet</p>
+            <p className="text-xs text-muted-foreground/80 mt-1">Click the + button to add your first task</p>
           </div>
         )}
       </div>
 
       <div className="mt-2 pt-2 border-t border-border">
         <p className="text-sm text-muted-foreground">
-          {tasks.filter((t) => !t.completed).length} remaining • {filteredTasks.length} shown
+          {tasks.filter((t) => !t.completed).length} remaining • {tasks.length} total
         </p>
       </div>
     </div>

@@ -8,8 +8,6 @@ type TaskInsert = Database["public"]["Tables"]["tasks"]["Insert"];
 type TaskUpdate = Database["public"]["Tables"]["tasks"]["Update"];
 
 type TaskWithRelations = Task & {
-  creator: { id: string; name: string } | null;
-  campaign: { id: string; brand: string } | null;
   assignee: { id: string; first_name: string | null; last_name: string | null; email: string | null } | null;
 };
 
@@ -21,14 +19,6 @@ export const useTasks = () => {
         .from("tasks")
         .select(`
           *,
-          creator:creators!tasks_related_creator_id_fkey (
-            id,
-            name
-          ),
-          campaign:campaigns!tasks_related_campaign_id_fkey (
-            id,
-            brand
-          ),
           assignee:profiles!tasks_assigned_to_fkey (
             id,
             first_name,
