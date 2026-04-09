@@ -17,6 +17,7 @@ import { DatePickerCell } from "@/components/campaign-tracker/DatePickerCell";
 import { StatusSelect } from "@/components/campaign-tracker/StatusSelect";
 import { CreatorSelector } from "@/components/campaign-tracker/CreatorSelector";
 import { CampaignDetailModal } from "@/components/campaign-tracker/CampaignDetailModal";
+import { CreateCampaignDialog } from "@/components/campaign-tracker/CreateCampaignDialog";
 import { CampaignData, Creator } from "@/data/campaignTrackerData";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -109,6 +110,7 @@ const CampaignTracker = () => {
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignData | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [isDetailReadOnly, setIsDetailReadOnly] = useState(false);
+  const [isCreateCampaignOpen, setIsCreateCampaignOpen] = useState(false);
   const [zoomIndex, setZoomIndex] = useState(DEFAULT_ZOOM_INDEX);
   const [highlightedCampaignId, setHighlightedCampaignId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -641,6 +643,15 @@ const CampaignTracker = () => {
             </Badge>
           )}
         </div>
+        <div className="flex justify-end mb-4">
+          <Button
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => setIsCreateCampaignOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Campaign
+          </Button>
+        </div>
         <CreatorSelector
           creators={creatorsForCurrentView}
           onSelect={setSelectedCreator}
@@ -653,6 +664,12 @@ const CampaignTracker = () => {
                 ? "No creators with pending campaigns"
                 : "No creators with completed campaigns"
           }
+        />
+        <CreateCampaignDialog
+          open={isCreateCampaignOpen}
+          onOpenChange={setIsCreateCampaignOpen}
+          creators={creators}
+          activeColumns={activeColumns}
         />
       </DashboardLayout>
     );
@@ -791,9 +808,12 @@ const CampaignTracker = () => {
               <Upload className="w-4 h-4" />
               Import Excel
             </Button>
-            <Button onClick={addNewRow} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => setIsCreateCampaignOpen(true)}
+            >
               <Plus className="w-4 h-4 mr-2" />
-              Add Row
+              Create Campaign
             </Button>
           </div>
         </div>
@@ -1026,6 +1046,15 @@ const CampaignTracker = () => {
           readOnly={isDetailReadOnly}
         />
       )}
+
+      {/* Create Campaign Dialog (grid view — creator is preselected) */}
+      <CreateCampaignDialog
+        open={isCreateCampaignOpen}
+        onOpenChange={setIsCreateCampaignOpen}
+        creators={creators}
+        activeColumns={activeColumns}
+        preselectedCreatorId={selectedCreator?.id}
+      />
     </DashboardLayout>
   );
 };

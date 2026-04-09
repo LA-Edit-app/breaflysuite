@@ -7,8 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { useCreateCreator, useCreators, useDeleteCreator, useUpdateCreator } from "@/hooks/useCreators";
+import { useCreateCreator, useCreators, useDeleteCreator, useUpdateCreator, useAddCreatorPlatform } from "@/hooks/useCreators";
+import { usePlatforms } from "@/hooks/useDatabase";
+import { useActiveCampaignsPerCreator } from "@/hooks/useCampaigns";
 import {
   Select,
   SelectContent,
@@ -38,6 +41,9 @@ const Creators = () => {
   const createCreator = useCreateCreator();
   const updateCreator = useUpdateCreator();
   const deleteCreator = useDeleteCreator();
+  const addCreatorPlatform = useAddCreatorPlatform();
+  const { data: platforms = [] } = usePlatforms();
+  const { data: activeCampaignsMap = {} } = useActiveCampaignsPerCreator();
 
   const [isAddCreatorOpen, setIsAddCreatorOpen] = useState(false);
   const [isEditCreatorOpen, setIsEditCreatorOpen] = useState(false);
@@ -45,11 +51,13 @@ const Creators = () => {
   const [newCreatorName, setNewCreatorName] = useState("");
   const [newCreatorHandle, setNewCreatorHandle] = useState("");
   const [newCreatorEmail, setNewCreatorEmail] = useState("");
+  const [newCreatorPlatforms, setNewCreatorPlatforms] = useState<{ platformId: string; followerCount: string }[]>([]);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [editingCreatorId, setEditingCreatorId] = useState<string | null>(null);
   const [editCreatorName, setEditCreatorName] = useState("");
   const [editCreatorHandle, setEditCreatorHandle] = useState("");
   const [editCreatorEmail, setEditCreatorEmail] = useState("");
+  const [editCreatorPlatforms, setEditCreatorPlatforms] = useState<{ platformId: string; followerCount: string }[]>([]);
 
   const normalizeHandle = (value: string) => {
     const clean = value.trim().replace(/^@+/, "").toLowerCase();
@@ -81,15 +89,25 @@ const Creators = () => {
     }
 
     try {
-      await createCreator.mutateAsync({
+      const creator = await createCreator.mutateAsync({
         name: newCreatorName.trim(),
         handle,
         email: newCreatorEmail.trim(),
       });
 
+      for (const p of newCreatorPlatforms) {
+        const parsed = parseInt(p.followerCount.replace(/,/g, ""), 10);
+        await addCreatorPlatform.mutateAsync({
+          creatorId: creator.id,
+          platformId: p.platformId,
+          followerCount: isNaN(parsed) ? undefined : parsed,
+        });
+      }
+
       setNewCreatorName("");
       setNewCreatorHandle("");
       setNewCreatorEmail("");
+      setNewCreatorPlatforms([]);
       setIsAddCreatorOpen(false);
       toast.success("Creator saved to database");
     } catch (mutationError: any) {
@@ -102,11 +120,18 @@ const Creators = () => {
     name: string;
     handle: string;
     email: string | null;
+    creator_platforms: { platform_id: string; follower_count: number | null }[];
   }) => {
     setEditingCreatorId(creator.id);
     setEditCreatorName(creator.name);
     setEditCreatorHandle(creator.handle);
     setEditCreatorEmail(creator.email || "");
+    setEditCreatorPlatforms(
+      creator.creator_platforms.map((cp) => ({
+        platformId: cp.platform_id,
+        followerCount: cp.follower_count != null ? String(cp.follower_count) : "",
+      }))
+    );
     setIsEditCreatorOpen(true);
   };
 
@@ -133,8 +158,19 @@ const Creators = () => {
         },
       });
 
+      // Upsert platform records
+      for (const p of editCreatorPlatforms) {
+        const parsed = parseInt(p.followerCount.replace(/,/g, ""), 10);
+        await addCreatorPlatform.mutateAsync({
+          creatorId: editingCreatorId,
+          platformId: p.platformId,
+          followerCount: isNaN(parsed) ? undefined : parsed,
+        });
+      }
+
       setIsEditCreatorOpen(false);
       setEditingCreatorId(null);
+      setEditCreatorPlatforms([]);
       toast.success("Creator updated");
     } catch (mutationError: any) {
       toast.error(mutationError?.message || "Failed to update creator");
@@ -310,7 +346,9 @@ const Creators = () => {
                     <td className="py-4 px-6 font-medium text-foreground">
                       {totalFollowers > 0 ? totalFollowers.toLocaleString() : "-"}
                     </td>
-                    <td className="py-4 px-6 text-foreground">-</td>
+                    <td className="py-4 px-6 text-foreground">
+                      {activeCampaignsMap[creator.id] ?? 0}
+                    </td>
                     <td className="py-4 px-6">
                       <div className="flex gap-2">
                         {creator.creator_platforms.map((platform) => {
@@ -376,7 +414,18 @@ const Creators = () => {
           </div>
         </div>
 
-        <Dialog open={isAddCreatorOpen} onOpenChange={setIsAddCreatorOpen}>
+        <Dialog
+          open={isAddCreatorOpen}
+          onOpenChange={(open) => {
+            setIsAddCreatorOpen(open);
+            if (!open) {
+              setNewCreatorName("");
+              setNewCreatorHandle("");
+              setNewCreatorEmail("");
+              setNewCreatorPlatforms([]);
+            }
+          }}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add Creator</DialogTitle>
@@ -411,14 +460,68 @@ const Creators = () => {
                   placeholder="@creatorhandle"
                 />
               </div>
+              {platforms.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Platforms &amp; Follower Counts</Label>
+                  <div className="space-y-3 rounded-md border border-border p-3">
+                    {platforms.map((platform) => {
+                      const selected = newCreatorPlatforms.find((p) => p.platformId === platform.id);
+                      return (
+                        <div key={platform.id} className="flex items-center gap-3">
+                          <Checkbox
+                            id={`new-platform-${platform.id}`}
+                            checked={!!selected}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setNewCreatorPlatforms((prev) => [
+                                  ...prev,
+                                  { platformId: platform.id, followerCount: "" },
+                                ]);
+                              } else {
+                                setNewCreatorPlatforms((prev) =>
+                                  prev.filter((p) => p.platformId !== platform.id)
+                                );
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`new-platform-${platform.id}`}
+                            className="flex-1 cursor-pointer text-sm"
+                          >
+                            {platform.name}
+                          </Label>
+                          {selected && (
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="Followers"
+                              className="w-32 h-8 text-sm"
+                              value={selected.followerCount}
+                              onChange={(e) =>
+                                setNewCreatorPlatforms((prev) =>
+                                  prev.map((p) =>
+                                    p.platformId === platform.id
+                                      ? { ...p, followerCount: e.target.value }
+                                      : p
+                                  )
+                                )
+                              }
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddCreatorOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddCreator} disabled={createCreator.isPending}>
-                {createCreator.isPending ? "Saving..." : "Save"}
+              <Button onClick={handleAddCreator} disabled={createCreator.isPending || addCreatorPlatform.isPending}>
+                {createCreator.isPending || addCreatorPlatform.isPending ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -428,7 +531,10 @@ const Creators = () => {
           open={isEditCreatorOpen}
           onOpenChange={(open) => {
             setIsEditCreatorOpen(open);
-            if (!open) setEditingCreatorId(null);
+            if (!open) {
+              setEditingCreatorId(null);
+              setEditCreatorPlatforms([]);
+            }
           }}
         >
           <DialogContent>
@@ -465,14 +571,68 @@ const Creators = () => {
                   placeholder="@creatorhandle"
                 />
               </div>
+              {platforms.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Platforms &amp; Follower Counts</Label>
+                  <div className="space-y-3 rounded-md border border-border p-3">
+                    {platforms.map((platform) => {
+                      const selected = editCreatorPlatforms.find((p) => p.platformId === platform.id);
+                      return (
+                        <div key={platform.id} className="flex items-center gap-3">
+                          <Checkbox
+                            id={`edit-platform-${platform.id}`}
+                            checked={!!selected}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setEditCreatorPlatforms((prev) => [
+                                  ...prev,
+                                  { platformId: platform.id, followerCount: "" },
+                                ]);
+                              } else {
+                                setEditCreatorPlatforms((prev) =>
+                                  prev.filter((p) => p.platformId !== platform.id)
+                                );
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`edit-platform-${platform.id}`}
+                            className="flex-1 cursor-pointer text-sm"
+                          >
+                            {platform.name}
+                          </Label>
+                          {selected && (
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="Followers"
+                              className="w-32 h-8 text-sm"
+                              value={selected.followerCount}
+                              onChange={(e) =>
+                                setEditCreatorPlatforms((prev) =>
+                                  prev.map((p) =>
+                                    p.platformId === platform.id
+                                      ? { ...p, followerCount: e.target.value }
+                                      : p
+                                  )
+                                )
+                              }
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsEditCreatorOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSaveCreatorEdits} disabled={updateCreator.isPending}>
-                {updateCreator.isPending ? "Saving..." : "Save Changes"}
+              <Button onClick={handleSaveCreatorEdits} disabled={updateCreator.isPending || addCreatorPlatform.isPending}>
+                {updateCreator.isPending || addCreatorPlatform.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </DialogContent>

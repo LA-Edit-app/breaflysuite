@@ -378,6 +378,28 @@ export const useRecentCampaigns = (limit = 5) => {
   });
 };
 
+// Get active campaign count per creator (map: creator_id -> count)
+export const useActiveCampaignsPerCreator = () => {
+  return useQuery({
+    queryKey: ['campaigns', 'per-creator-active'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('creator_id, campaign_status');
+
+      if (error) throw error;
+
+      const countMap: Record<string, number> = {};
+      data.forEach((c) => {
+        if (c.campaign_status === 'active') {
+          countMap[c.creator_id] = (countMap[c.creator_id] || 0) + 1;
+        }
+      });
+      return countMap;
+    },
+  });
+};
+
 // Create a new campaign
 export const useCreateCampaign = () => {
   const queryClient = useQueryClient();
